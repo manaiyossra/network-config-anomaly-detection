@@ -1,0 +1,17 @@
+devices.yaml
+.env
+*.pem
+*.key
+backups/
+*.db
+*.sqlite
+models/
+*.joblib
+configs_externes/
+configs_reference/
+revue_*.csv
+evaluation_regles.csv
+__pycache__/
+*.pyc
+.venv/
+venv/

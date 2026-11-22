@@ -1,0 +1,10 @@
+# Modèle d'inventaire : copier en « devices.yaml » (non versionné) et adapter.
+# Les secrets peuvent être lus dans des variables d'environnement avec le préfixe « env: ».
+devices:
+  - name: MonEquipement
+    host: 192.0.2.10
+    device_type: cisco_ios
+    username: admin
+    password: "env:DEVICE_PASSWORD"
+    secret: "env:DEVICE_PASSWORD"
+    auto_fix: false        # true uniquement pour un équipement qui vous appartient (lab isolé)

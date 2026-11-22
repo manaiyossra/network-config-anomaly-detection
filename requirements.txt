@@ -1,0 +1,5 @@
+pyyaml
+netmiko
+pandas
+scikit-learn
+streamlit

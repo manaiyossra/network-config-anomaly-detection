@@ -1,0 +1,320 @@
+rules:
+  - rule_id: SEC001
+    description: "Telnet autorisé sur les lignes VTY (au lieu de SSH uniquement)"
+    check_type: line_contains
+    section: "line vty"
+    pattern: "transport input"
+    bad_values: ["telnet", "all"]
+    good_value: "ssh"
+    risk_level: High
+    confidence: high
+    auto_apply: true
+    recommendation: "Configurer 'transport input ssh' pour désactiver Telnet sur les lignes VTY."
+    code_fix: "line {context}\n transport input ssh"
+
+  - rule_id: SEC002
+    description: "Communauté SNMP faible ou SNMP non sécurisé (v1/v2c)"
+    check_type: line_contains
+    section: "global"
+    pattern: "snmp-server community"
+    bad_values: ["public", "private"]
+    good_value: null
+    risk_level: High
+    confidence: high
+    auto_apply: false
+    recommendation: "Migrer vers SNMPv3 avec authentification et chiffrement, éviter les community strings par défaut."
+    code_fix: "no snmp-server community public\nno snmp-server community private\nsnmp-server group ADMINS v3 priv\nsnmp-server user netadmin ADMINS v3 auth sha <mot_de_passe_auth> priv aes 128 <mot_de_passe_priv>"
+
+  - rule_id: SEC003
+    description: "Chiffrement des mots de passe non activé"
+    check_type: absence
+    section: "global"
+    pattern: "service password-encryption"
+    risk_level: Medium
+    confidence: high
+    auto_apply: true
+    recommendation: "Activer 'service password-encryption' pour chiffrer les mots de passe stockés."
+    code_fix: "service password-encryption"
+
+  - rule_id: SEC004
+    description: "AAA (authentification centralisée) non activé"
+    check_type: absence
+    section: "global"
+    pattern: "aaa new-model"
+    risk_level: Medium
+    confidence: high
+    auto_apply: false
+    recommendation: "Activer 'aaa new-model' pour une gestion centralisée de l'authentification."
+    code_fix: "aaa new-model\naaa authentication login default local"
+
+  - rule_id: SEC005
+    description: "Port trunk sans liste de VLANs autorisés explicite"
+    check_type: interface_trunk_check
+    section: "interface"
+    pattern: "switchport mode trunk"
+    required_pattern: "switchport trunk allowed vlan"
+    risk_level: Medium
+    confidence: high
+    auto_apply: false
+    recommendation: "Restreindre explicitement les VLANs autorisés sur les ports trunk avec 'switchport trunk allowed vlan'."
+    code_fix: "interface {context}\n switchport trunk allowed vlan <liste_vlans_a_definir>"
+
+  - rule_id: SEC006
+    description: "Absence de bannière de connexion (login banner)"
+    check_type: absence
+    section: "global"
+    pattern: "banner login"
+    risk_level: Low
+    confidence: high
+    auto_apply: true
+    recommendation: "Ajouter une bannière d'avertissement légal avec 'banner login'."
+    code_fix: "banner login # Acces reserve - Usage autorise uniquement #"
+
+  - rule_id: SEC007
+    description: "ACL sans deny final explicite"
+    check_type: acl_check
+    section: "access-list"
+    pattern: "access-list"
+    required_pattern: "deny"
+    risk_level: Medium
+    confidence: medium
+    auto_apply: false
+    recommendation: "Vérifier que chaque ACL se termine par un deny explicite (default-deny)."
+    code_fix: "ip access-list extended {context}\n deny ip any any"
+
+  - rule_id: SEC008
+    description: "HTTP non sécurisé actif (ip http server sans HTTPS)"
+    check_type: pair_check
+    section: "global"
+    pattern: "ip http server"
+    required_pattern: "ip http secure-server"
+    risk_level: Medium
+    confidence: medium
+    auto_apply: false
+    recommendation: "Si 'ip http server' est actif, s'assurer que 'ip http secure-server' (HTTPS) l'est aussi, ou désactiver HTTP en clair."
+    code_fix: "ip http secure-server\nno ip http server"
+
+  - rule_id: SEC009
+    description: "IP source-routing non confirmé désactivé (dépend de la plateforme)"
+    check_type: absence
+    section: "global"
+    pattern: "no ip source-route"
+    risk_level: Medium
+    confidence: low
+    auto_apply: false
+    recommendation: "Désactiver le source-routing IP. Sur IOS XE récent, la ligne 'no ip source-route' n'apparaît que dans 'show running-config all' : vérifier avec cette commande avant de conclure."
+    code_fix: "no ip source-route"
+
+  - rule_id: SEC010
+    description: "CDP (Cisco Discovery Protocol) actif globalement"
+    check_type: absence
+    section: "global"
+    pattern: "no cdp run"
+    risk_level: Low
+    confidence: medium
+    auto_apply: false
+    recommendation: "Désactiver CDP globalement s'il n'est pas nécessaire, pour limiter la divulgation d'informations sur l'équipement aux voisins directs."
+    code_fix: "no cdp run"
+
+  - rule_id: SEC011
+    description: "Service BOOTP non confirmé désactivé (dépend de la plateforme)"
+    check_type: absence
+    section: "global"
+    pattern: "no ip bootp server"
+    risk_level: Low
+    confidence: low
+    auto_apply: false
+    recommendation: "Désactiver le serveur BOOTP. Sur IOS XE récent, la ligne n'apparaît que dans 'show running-config all' : vérifier avec cette commande avant de conclure."
+    code_fix: "no ip bootp server"
+
+  - rule_id: SEC012
+    description: "Service PAD non confirmé désactivé (dépend de la plateforme)"
+    check_type: absence
+    section: "global"
+    pattern: "no service pad"
+    risk_level: Low
+    confidence: low
+    auto_apply: false
+    recommendation: "Désactiver le service PAD. Sur IOS XE récent, la ligne n'apparaît que dans 'show running-config all' : vérifier avec cette commande avant de conclure."
+    code_fix: "no service pad"
+
+  - rule_id: SEC013
+    description: "Services TCP small-servers explicitement activés (echo, chargen, discard...)"
+    check_type: forbidden_line
+    section: "global"
+    pattern: "service tcp-small-servers"
+    risk_level: Medium
+    confidence: low
+    auto_apply: true
+    recommendation: "Désactiver les petits services TCP de diagnostic, exploitables pour des attaques par amplification/déni de service."
+    code_fix: "no service tcp-small-servers"
+
+  - rule_id: SEC014
+    description: "Services UDP small-servers explicitement activés (echo, chargen, discard...)"
+    check_type: forbidden_line
+    section: "global"
+    pattern: "service udp-small-servers"
+    risk_level: Medium
+    confidence: low
+    auto_apply: true
+    recommendation: "Désactiver les petits services UDP de diagnostic, exploitables pour des attaques par amplification/déni de service."
+    code_fix: "no service udp-small-servers"
+
+  - rule_id: SEC015
+    description: "TCP keepalives non activés sur les sessions entrantes"
+    check_type: absence
+    section: "global"
+    pattern: "service tcp-keepalives-in"
+    risk_level: Low
+    confidence: medium
+    auto_apply: true
+    recommendation: "Activer les keepalives TCP entrants pour détecter et fermer automatiquement les sessions de management mortes/orphelines."
+    code_fix: "service tcp-keepalives-in"
+
+  - rule_id: SEC016
+    description: "Journalisation locale (logging buffered) non configurée"
+    check_type: presence_substring
+    section: "global"
+    pattern: "logging buffered"
+    alt_patterns: ["logging host"]
+    risk_level: Medium
+    confidence: low
+    auto_apply: true
+    recommendation: "Activer la journalisation locale pour conserver un historique des événements exploitable en cas d'incident ou d'audit."
+    code_fix: "logging buffered 64000 informational"
+
+  - rule_id: SEC017
+    description: "Synchronisation NTP non configurée"
+    check_type: presence_substring
+    section: "global"
+    pattern: "ntp server"
+    alt_patterns: ["sntp server", "ntp peer"]
+    risk_level: Low
+    confidence: medium
+    auto_apply: false
+    recommendation: "Configurer un serveur NTP pour garantir des horodatages fiables dans les logs et la validité des certificats."
+    code_fix: "ntp server <adresse_ip_serveur_ntp>"
+
+  - rule_id: SEC018
+    description: "Timeout d'inactivité désactivé (exec-timeout 0) sur les lignes VTY"
+    check_type: vty_exact_line
+    section: "line vty"
+    bad_lines: ["exec-timeout 0 0", "exec-timeout 0"]
+    risk_level: Medium
+    confidence: medium
+    auto_apply: true
+    recommendation: "Remplacer 'exec-timeout 0 0' (session jamais fermée) par un timeout fini pour fermer automatiquement les sessions d'administration inactives."
+    code_fix: "line {context}\n exec-timeout 10 0"
+  - rule_id: SEC019
+    description: "Mot de passe enable stocké avec « enable password » (au lieu de enable secret)"
+    check_type: forbidden_line
+    section: "global"
+    pattern: "enable password"
+    risk_level: Medium
+    confidence: high
+    auto_apply: false
+    recommendation: "Remplacer « enable password » par « enable secret » (hachage) et supprimer l'ancienne commande."
+    code_fix: "enable secret <mot_de_passe_enable>\nno enable password"
+
+  - rule_id: SEC020
+    description: "Utilisateur local défini avec « password » (au lieu de secret)"
+    check_type: regex_line
+    section: "global"
+    regex: '^username\s+\S+(\s+privilege\s+\d+)?\s+password\s'
+    risk_level: Medium
+    confidence: high
+    auto_apply: false
+    recommendation: "Définir les comptes locaux avec « secret » plutôt que « password » (mot de passe en clair ou réversible)."
+    code_fix: "! recréer le compte avec : username <nom> privilege <niveau> secret <mot_de_passe>"
+
+  - rule_id: SEC021
+    description: "Communauté SNMP avec droit d'écriture (RW)"
+    check_type: regex_line
+    section: "global"
+    regex: '^snmp-server\s+community\s+\S+(\s+view\s+\S+)?\s+RW\b'
+    risk_level: High
+    confidence: high
+    auto_apply: false
+    recommendation: "Supprimer l'accès SNMP en écriture ou migrer vers SNMPv3 avec authentification et chiffrement."
+    code_fix: "! supprimer la communauté en écriture : no snmp-server community <nom>"
+
+  - rule_id: SEC022
+    description: "SSH version 1 explicitement autorisé"
+    check_type: forbidden_line
+    section: "global"
+    pattern: "ip ssh version 1"
+    risk_level: High
+    confidence: high
+    auto_apply: false
+    recommendation: "Imposer SSH version 2 (la version 1 présente des faiblesses cryptographiques connues)."
+    code_fix: "ip ssh version 2"
+
+  - rule_id: SEC023
+    description: "Ligne VTY sans restriction de la source d'administration (access-class)"
+    check_type: vty_missing_regex
+    section: "line vty"
+    blocks: ["vty"]
+    regex: '^access-class\s+\S+\s+in\b'
+    label: "access-class ... in"
+    risk_level: Medium
+    confidence: medium
+    auto_apply: false
+    recommendation: "Limiter les adresses autorisées à administrer l'équipement avec une ACL appliquée par access-class."
+    code_fix: "line {context}\n access-class <acl_administration> in"
+
+  - rule_id: SEC024
+    description: "Ligne d'accès sans authentification (« no login »)"
+    check_type: line_exact_line
+    section: "line"
+    blocks: ["vty", "con", "aux"]
+    bad_lines: ["no login"]
+    risk_level: High
+    confidence: high
+    auto_apply: false
+    recommendation: "Exiger une authentification sur toutes les lignes d'accès (login local ou AAA)."
+    code_fix: "line {context}\n login local"
+
+  - rule_id: SEC025
+    description: "Mot de passe de ligne en clair (commande « password » sur une ligne)"
+    check_type: line_regex
+    section: "line"
+    blocks: ["vty", "con", "aux"]
+    regex: '^password\s+(?!7\b)\S+'
+    risk_level: Medium
+    confidence: high
+    auto_apply: false
+    recommendation: "Remplacer le mot de passe de ligne par une authentification locale (login local) ou AAA."
+    code_fix: "! remplacer par : line {context} / login local (après création d'un utilisateur local avec secret)"
+
+  - rule_id: SEC026
+    description: "Services hérités explicitement activés (finger, identd, rsh/rcp)"
+    check_type: forbidden_lines
+    section: "global"
+    patterns: ["service finger", "ip finger", "ip identd", "ip rcmd rsh-enable", "ip rcmd rcp-enable"]
+    risk_level: Medium
+    confidence: medium
+    auto_apply: false
+    recommendation: "Désactiver ces services anciens et non chiffrés, qui élargissent la surface d'attaque."
+    code_fix: ""
+
+  - rule_id: SEC027
+    description: "ip directed-broadcast activé sur une interface"
+    check_type: interface_forbidden_line
+    section: "interface"
+    patterns: ["ip directed-broadcast"]
+    risk_level: Medium
+    confidence: medium
+    auto_apply: false
+    recommendation: "Désactiver les diffusions dirigées, exploitables pour des attaques par amplification."
+    code_fix: ""
+
+  - rule_id: SEC028
+    description: "Authentification AAA avec repli « none » (accès sans mot de passe si le serveur est injoignable)"
+    check_type: regex_line
+    section: "global"
+    regex: '^aaa\s+authentication\s+(login|enable)\s+\S+\s+.*\bnone\b'
+    risk_level: Medium
+    confidence: medium
+    auto_apply: false
+    recommendation: "Retirer la méthode « none » de la liste d'authentification, ou la remplacer par « local »."
+    code_fix: "! retirer « none » de la liste d'authentification AAA concernée"
